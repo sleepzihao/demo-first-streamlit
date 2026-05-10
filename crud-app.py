@@ -48,7 +48,7 @@ if data:
     df.insert(0, "試算表列數", range(2, len(data) + 2))
     st.dataframe(df, use_container_width=True)
 else:
-    st.info("目前工作表中沒有資料。請確保工作表的第一列有設定標題（例如：姓名, 數量）")
+    st.info("目前工作表中沒有資料。請確保工作表的第一列有設定標題（例如：學生姓名, 學號, 課程名稱, 學分, 備註）")
 
 st.divider()
 
@@ -58,17 +58,20 @@ st.divider()
 st.header("2️⃣ 新增資料")
 
 with st.form("add_data_form", clear_on_submit=True):
-    col1 = st.text_input("姓名", key="add_name")
-    col2 = st.number_input("數量", min_value=0, value=1, key="add_qty")
+    col1 = st.text_input("學生姓名", key="add_name")
+    col2 = st.text_input("學號", key="add_student_id")
+    col3 = st.text_input("課程名稱", key="add_course_name")
+    col4 = st.number_input("學分", min_value=0, value=3, key="add_credits")
+    col5 = st.text_input("備註", key="add_remark")
 
     submitted = st.form_submit_button("寫入 Google Sheet")
 
     if submitted:
         if col1.strip() == "":
-            st.warning("請填寫姓名！")
+            st.warning("請填寫學生姓名！")
         else:
             with st.spinner("正在寫入資料中..."):
-                worksheet.append_row([col1, col2])
+                worksheet.append_row([col1, col2, col3, col4, col5])  # 將新增的欄位加入寫入陣列
             st.success("資料已成功寫入！")
             st.rerun()
 
@@ -76,9 +79,9 @@ st.divider()
 
 # 只有在有資料的時候，才顯示修改與刪除的區塊
 if data:
-    # 建立一個選單選項的對應字典： "第 X 列: 姓名" -> 實際列數
+    # 建立一個選單選項的對應字典： "第 X 列: 學生姓名" -> 實際列數
     # 這樣我們才能讓 gspread 知道要改哪一列
-    row_options = {f"第 {i + 2} 列: {row['姓名']}": i + 2 for i, row in enumerate(data)}
+    row_options = {f"第 {i + 2} 列: {row.get('學生姓名', '')} - {row.get('課程名稱', '')}": i + 2 for i, row in enumerate(data)}
 
     col_update, col_delete = st.columns(2)
 
@@ -96,18 +99,24 @@ if data:
         current_data = data[selected_row_update - 2]
 
         with st.form("update_data_form"):
-            new_name = st.text_input("新姓名", value=current_data["姓名"])
-            new_qty = st.number_input("新數量", min_value=0, value=int(current_data["數量"]))
+            new_name = st.text_input("新學生姓名", value=current_data.get("學生姓名", ""))
+            new_student_id = st.text_input("新學號", value=current_data.get("學號", ""))
+            new_course = st.text_input("新課程名稱", value=current_data.get("課程名稱", ""))
+            new_credits = st.number_input("新學分", min_value=0, value=int(current_data.get("學分", 0) or 0))
+            new_remark = st.text_input("新備註", value=current_data.get("備註", ""))  
             update_submitted = st.form_submit_button("更新資料")
 
             if update_submitted:
                 if new_name.strip() == "":
-                    st.warning("請填寫姓名！")
+                    st.warning("請填寫學生姓名！")
                 else:
                     with st.spinner("正在更新資料中..."):
-                        # 分別更新 A 欄(第一欄) 與 B 欄(第二欄)
+                        # 分別更新 A 欄 到 E 欄
                         worksheet.update_cell(selected_row_update, 1, new_name)
-                        worksheet.update_cell(selected_row_update, 2, new_qty)
+                        worksheet.update_cell(selected_row_update, 2, new_student_id)
+                        worksheet.update_cell(selected_row_update, 3, new_course)  
+                        worksheet.update_cell(selected_row_update, 4, new_credits)
+                        worksheet.update_cell(selected_row_update, 5, new_remark)
                     st.success("資料已成功更新！")
                     st.rerun()
 
